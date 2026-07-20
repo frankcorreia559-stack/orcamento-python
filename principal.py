@@ -1,3 +1,8 @@
+from  interface import Sistema
+
+app = Sistema()
+app.mainloop()
+
 from cadastrar_cliente import cadastrar_cliente
 from listar_clientes import listar_clientes
 from editar_cliente import editar_cliente

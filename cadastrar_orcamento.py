@@ -2,7 +2,7 @@ import sqlite3
 
 def cadastrar_orcamento():
     
-    conexao = sqlite3.connect('orcamento.db')
+    conexao = sqlite3.connect('orcamentos.db')
     cursor = conexao.cursor()
 
     print('\n======= NOVO ORCAMENTO ========')

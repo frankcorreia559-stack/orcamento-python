@@ -2,7 +2,7 @@ import sqlite3
 
 def listar_orcamentos():
 
-    conexao = sqlite3.connect('orcamento.db')
+    conexao = sqlite3.connect('orcamentos.db')
     cursor = conexao.cursor()
 
     cursor.execute("""

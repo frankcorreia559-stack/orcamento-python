@@ -1,72 +1,61 @@
-import tkinter as tk
+import customtkinter as ctk
 
-def tela_cliente():
+ctk.set_appearance_mode('light')
+ctk.set_default_color_theme('blue')
+
+class Sistema(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Fs ART Gesso & Drywall")
+        self.geometry('1200x700')
+        self.minsize(1000, 600)
+
+        # menu lateral
+
+        self.menu = ctk.CTkFrame(self, width=220, corner_radius=0)
+        self.menu.pack(side='left', fill='y')
+
+        self.logo =ctk.CTkLabel(
+            self.menu,
+            text='Fs ART\nGesso & Drywall',
+            font=('Arial', 22, 'bold')
+        )
+        self.logo.pack(pady=30)
+
+        botoes = [
+            "🏠 Dashboard",
+            "👤 Clientes",
+            "📋 Orçamentos",
+            "📄 Relatórios",
+            "⚙ Configurações"
+        ]
+
+        for texto in botoes:
+            botao = ctk.CTkButton(
+                self.menu,
+                text=texto,
+                width=180,
+                height=40
+            )
+
+            botao.pack(pady=8)
+
+        # Área principal
+        self.conteudo = ctk.CTkFrame(self)
+        self.conteudo.pack(side="right", fill="both", expand=True)
+
+        titulo = ctk.CTkLabel(
+            self.conteudo,
+            text="Bem-vindo ao Sistema de Orçamentos",
+            font=("Arial", 28, "bold")
+        )
+        titulo.pack(pady=40)
+
+
+
+
+
     
-    janela_cliente = tk.Toplevel()
-    janela.title('Sistema de Orçamentos')
-    janela.geometry('400x300')
 
-    tk.Label(janela_cliente, text="Nome do Cliente").pack()
-
-    nome = tk.Entry(janela_cliente)
-    nome.pack()
-
-    tk.Label(janela_cliente, text='Telefone').pack()
-
-    telefone = tk.Entry(janela_cliente)
-    telefone.pack()
-
-    def salvar():
-        import sqlite3
-
-        conexao = sqlite3.connect('orcamentos.db')
-        cursor = conexao.cursor()
-
-        cursor.execute("""
-                       INSERT INTO clientes ( nome, telefone)
-                       VALUES (?, ?)
-                       """,
-                       (nome.get(), telefone.get()))
-        
-        conexao.commit()
-        conexao.close()
-
-        nome.delete(0, tk.END)
-        telefone.delete(0, tk.END)
-
-        print('Cliente cadastrado!')
-
-    botao = tk.Button(
-        janela_cliente,
-        text="Cadastrar",
-        command=salvar
-    )
-
-    botao.pack(pady=20)
-
-janela = tk.Tk()
-
-janela.title("Sistema de Orçamentos")
-janela.geometry("500x400")
-
-
-titulo = tk.Label(
-    janela,
-    text="SISTEMA DE ORÇAMENTOS",
-    font=("Arial", 16)
-)
-
-titulo.pack(pady=30)
-
-
-botao_cliente = tk.Button(
-    janela,
-    text="Cadastrar Cliente",
-    command=tela_cliente
-)
-
-botao_cliente.pack()
-
-
-janela.mainloop()
 
