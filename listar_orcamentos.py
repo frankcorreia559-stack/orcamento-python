@@ -1,49 +1,154 @@
+
 import sqlite3
 
 
+# ==========================================================
+# CONFIGURAÇÕES
+# ==========================================================
+
+BANCO_DADOS = "orcamentos.db"
+
+
+# ==========================================================
+# CONEXÃO COM BANCO
+# ==========================================================
+
+def conectar_banco():
+
+    conexao = sqlite3.connect(
+        BANCO_DADOS
+    )
+
+    # Permite acessar as colunas pelo nome:
+    # orcamento["id"]
+    # orcamento["cliente_nome"]
+    # orcamento["servico"]
+
+    conexao.row_factory = sqlite3.Row
+
+    return conexao
+
+
+# ==========================================================
+# LISTAR ORÇAMENTOS
+# ==========================================================
+
 def listar_orcamentos():
 
-    conexao = sqlite3.connect("orcamentos.db")
+    conexao = conectar_banco()
+
     cursor = conexao.cursor()
 
-    cursor.execute("""
-        SELECT
-            orcamentos.id,
-            clientes.nome,
-            clientes.telefone,
-            orcamentos.servico,
-            orcamentos.area,
-            orcamentos.valor_m2,
-            orcamentos.valor_total,
-            orcamentos.status,
-            orcamentos.data_criacao
-        FROM orcamentos
-        INNER JOIN clientes
-        ON orcamentos.cliente_id = clientes.id
-        ORDER BY orcamentos.id DESC
-    """)
+    try:
 
-    orcamentos = cursor.fetchall()
+        cursor.execute("""
+            SELECT
+                orcamentos.id AS id,
+                orcamentos.cliente_id AS cliente_id,
 
-    print("\n======= ORÇAMENTOS ========")
+                clientes.nome AS cliente_nome,
+                clientes.telefone AS cliente_telefone,
+
+                orcamentos.servico AS servico,
+                orcamentos.area AS area,
+                orcamentos.valor_m2 AS valor_m2,
+                orcamentos.valor_total AS valor_total,
+                orcamentos.status AS status,
+                orcamentos.data_criacao AS data_criacao
+
+            FROM orcamentos
+
+            INNER JOIN clientes
+                ON orcamentos.cliente_id = clientes.id
+
+            ORDER BY orcamentos.id DESC
+        """)
+
+        orcamentos = cursor.fetchall()
+
+        return orcamentos
+
+    except sqlite3.Error as erro:
+
+        print(
+            f"Erro ao listar orçamentos: {erro}"
+        )
+
+        return []
+
+    finally:
+
+        conexao.close()
+
+
+# ==========================================================
+# TESTE DO ARQUIVO
+# ==========================================================
+
+if __name__ == "__main__":
+
+    orcamentos = listar_orcamentos()
+
+    print(
+        "\n======= ORÇAMENTOS ========\n"
+    )
 
     if orcamentos:
 
         for orcamento in orcamentos:
 
-            print(f"\nOrçamento: {orcamento[0]}")
-            print(f"Cliente: {orcamento[1]}")
-            print(f"Telefone: {orcamento[2]}")
-            print(f"Serviço: {orcamento[3]}")
-            print(f"Área: {orcamento[4]:.2f} m²")
-            print(f"Valor por m²: R$ {orcamento[5]:.2f}")
-            print(f"Valor total: R$ {orcamento[6]:.2f}")
-            print(f"Status: {orcamento[7]}")
-            print(f"Data: {orcamento[8]}")
+            print(
+                f"Orçamento: "
+                f"{orcamento['id']}"
+            )
 
-            print("-" * 40)
+            print(
+                f"Cliente: "
+                f"{orcamento['cliente_nome']}"
+            )
+
+            print(
+                f"Telefone: "
+                f"{orcamento['cliente_telefone'] or 'Não informado'}"
+            )
+
+            print(
+                f"Serviço: "
+                f"{orcamento['servico']}"
+            )
+
+            print(
+                f"Área: "
+                f"{float(orcamento['area']):.2f} m²"
+            )
+
+            print(
+                f"Valor por m²: "
+                f"R$ {float(orcamento['valor_m2']):.2f}"
+            )
+
+            print(
+                f"Valor total: "
+                f"R$ {float(orcamento['valor_total']):.2f}"
+            )
+
+            print(
+                f"Status: "
+                f"{orcamento['status']}"
+            )
+
+            print(
+                f"Data: "
+                f"{orcamento['data_criacao']}"
+            )
+
+            print(
+                "-" * 40
+            )
 
     else:
-        print("\nNenhum orçamento cadastrado.")
 
-    conexao.close()
+        print(
+            "Nenhum orçamento cadastrado."
+        )
+

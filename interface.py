@@ -1,216 +1,454 @@
-
 import customtkinter as ctk
-import sqlite3
-import os
-
 from tkinter import messagebox
-from PIL import Image
+import tkinter as tk
+
+from banco import inicializar_banco
+
+from gerar_pdf import gerar_pdf_orcamento
+
+from clientes import (
+    cadastrar_cliente,
+    listar_clientes,
+    pesquisar_clientes,
+    editar_cliente,
+    excluir_cliente
+)
+
+from cadastrar_orcamento import (
+    cadastrar_orcamento,
+    listar_orcamentos,
+    pesquisar_orcamentos,
+    buscar_orcamento,
+    editar_orcamento,
+    excluir_orcamento
+)
+
+# ==========================================================
+# MATPLOTLIB
+# ==========================================================
+
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 # ==========================================================
-# CONFIGURAÇÕES DO CUSTOMTKINTER
+# CONFIGURAÇÕES
 # ==========================================================
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 
+# ==========================================================
+# CORES DO ORÇASMART
+# ==========================================================
+
+COR_PRINCIPAL = "#1F4E78"
+COR_SECUNDARIA = "#2E75B6"
+COR_FUNDO = "#F5F7FA"
+COR_CARD = "#FFFFFF"
+COR_TEXTO = "#222222"
+COR_TEXTO_SECUNDARIO = "#666666"
+COR_BORDA = "#E1E5EA"
+
+
+# ==========================================================
+# FUNÇÕES AUXILIARES
+# ==========================================================
+
+def formatar_moeda(valor):
+
+    try:
+        valor = float(valor)
+    except (ValueError, TypeError):
+        valor = 0
+
+    return (
+        f"R$ {valor:,.2f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+
+
+def formatar_numero(valor):
+
+    try:
+        valor = float(valor)
+    except (ValueError, TypeError):
+        valor = 0
+
+    return (
+        f"{valor:,.2f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+
+
+# ==========================================================
+# CLASSE PRINCIPAL
+# ==========================================================
+
 class Sistema(ctk.CTk):
 
     def __init__(self):
+
         super().__init__()
 
-        # ==================================================
-        # CONFIGURAÇÕES DA JANELA
-        # ==================================================
+        # --------------------------------------------------
+        # CONFIGURAÇÃO DA JANELA
+        # --------------------------------------------------
 
-        self.title("OrçaSmart")
-        self.geometry("1200x700")
-        self.minsize(1000, 600)
+        self.title(
+            "OrçaSmart - FS ART Gesso & Drywall"
+        )
 
-        # ==================================================
-        # MENU LATERAL
-        # ==================================================
+        self.geometry(
+            "1280x750"
+        )
+
+        self.minsize(
+            1050,
+            650
+        )
+
+        self.configure(
+            fg_color=COR_FUNDO
+        )
+
+        # --------------------------------------------------
+        # BANCO DE DADOS
+        # --------------------------------------------------
+
+        inicializar_banco()
+
+        # --------------------------------------------------
+        # INTERFACE
+        # --------------------------------------------------
+
+        self.criar_menu_lateral()
+
+        self.criar_area_principal()
+
+        # --------------------------------------------------
+        # DASHBOARD INICIAL
+        # --------------------------------------------------
+
+        self.abrir_dashboard()
+
+    # ======================================================
+    # MENU LATERAL
+    # ======================================================
+
+    def criar_menu_lateral(self):
 
         self.menu = ctk.CTkFrame(
+
             self,
-            width=220,
-            corner_radius=0
+
+            width=230,
+
+            corner_radius=0,
+
+            fg_color=COR_PRINCIPAL
+
         )
 
         self.menu.pack(
+
             side="left",
+
             fill="y"
+
         )
 
-        self.menu.pack_propagate(False)
+        self.menu.pack_propagate(
+            False
+        )
 
-        # ==================================================
-        # NOME DO SISTEMA
-        # ==================================================
+        # --------------------------------------------------
+        # LOGO / NOME
+        # --------------------------------------------------
 
         self.logo_nome = ctk.CTkLabel(
+
             self.menu,
-            text="OrçaSmart",
-            font=("Arial", 26, "bold")
+
+            text=(
+                "FS ART\n"
+                "Gesso & Drywall"
+            ),
+
+            font=(
+                "Arial",
+                21,
+                "bold"
+            ),
+
+            text_color="white",
+
+            justify="center"
+
         )
 
         self.logo_nome.pack(
-            pady=(30, 40)
+
+            pady=(
+                35,
+                40
+            )
+
         )
 
-        # ==================================================
-        # BOTÕES DO MENU
-        # ==================================================
+        # --------------------------------------------------
+        # MENU
+        # --------------------------------------------------
 
         botoes = [
-            "🏠 Dashboard",
-            "👤 Clientes",
-            "📋 Orçamentos",
-            "📄 Relatórios",
-            "⚙ Configurações"
+
+            (
+                "🏠  Dashboard",
+                self.abrir_dashboard
+            ),
+
+            (
+                "👤  Clientes",
+                self.abrir_clientes
+            ),
+
+            (
+                "📋  Orçamentos",
+                self.abrir_orcamentos
+            ),
+
+            (
+                "📄  Relatórios",
+                self.abrir_relatorios
+            ),
+
+            (
+                "⚙  Configurações",
+                self.abrir_configuracoes
+            )
+
         ]
 
-        for texto in botoes:
+        self.botoes_menu = []
+
+        for texto, comando in botoes:
 
             botao = ctk.CTkButton(
+
                 self.menu,
+
                 text=texto,
-                width=180,
+
+                width=190,
+
                 height=45,
-                font=("Arial", 14)
+
+                corner_radius=8,
+
+                font=(
+                    "Arial",
+                    14,
+                    "bold"
+                ),
+
+                fg_color="transparent",
+
+                hover_color=COR_SECUNDARIA,
+
+                text_color="white",
+
+                anchor="w",
+
+                command=comando
+
             )
 
             botao.pack(
-                pady=8
+
+                pady=6,
+
+                padx=18
+
             )
 
-            # DASHBOARD
-            if texto == "🏠 Dashboard":
+            self.botoes_menu.append(
+                botao
+            )
 
-                botao.configure(
-                    command=self.abrir_dashboard
-                )
+        # --------------------------------------------------
+        # RODAPÉ DO MENU
+        # --------------------------------------------------
 
-            # CLIENTES
-            elif texto == "👤 Clientes":
+        ctk.CTkLabel(
 
-                botao.configure(
-                    command=self.abrir_clientes
-                )
+            self.menu,
 
-            # ORÇAMENTOS
-            elif texto == "📋 Orçamentos":
+            text=(
+                "OrçaSmart\n"
+                "Sistema de Orçamentos"
+            ),
 
-                botao.configure(
-                    command=self.abrir_orcamentos
-                )
+            font=(
+                "Arial",
+                10
+            ),
 
-            # RELATÓRIOS
-            elif texto == "📄 Relatórios":
+            text_color="#DCE6F0"
 
-                botao.configure(
-                    command=self.abrir_relatorios
-                )
+        ).pack(
 
-            # CONFIGURAÇÕES
-            elif texto == "⚙ Configurações":
+            side="bottom",
 
-                botao.configure(
-                    command=self.abrir_configuracoes
-                )
+            pady=25
 
-        # ==================================================
-        # ÁREA PRINCIPAL
-        # ==================================================
+        )
+
+    # ======================================================
+    # ÁREA PRINCIPAL
+    # ======================================================
+
+    def criar_area_principal(self):
 
         self.conteudo = ctk.CTkFrame(
+
             self,
+
             corner_radius=0,
-            fg_color="white"
+
+            fg_color=COR_FUNDO
+
         )
 
         self.conteudo.pack(
+
             side="right",
+
             fill="both",
+
             expand=True
+
         )
 
-        # ==================================================
-        # CARREGAR LOGO
-        # ==================================================
+        # --------------------------------------------------
+        # CABEÇALHO
+        # --------------------------------------------------
 
-        caminho_logo = os.path.join(
-            os.path.dirname(__file__),
-            "logo_orcamento.png"
+        self.cabecalho = ctk.CTkFrame(
+
+            self.conteudo,
+
+            height=80,
+
+            corner_radius=0,
+
+            fg_color=COR_CARD
+
         )
 
-        print("Caminho da logo:", caminho_logo)
-        print("Logo existe?", os.path.exists(caminho_logo))
+        self.cabecalho.pack(
 
-        if os.path.exists(caminho_logo):
+            fill="x"
 
-            imagem_original = Image.open(
-                caminho_logo
-            )
+        )
 
-            self.logo_fundo_imagem = ctk.CTkImage(
-                light_image=imagem_original,
-                dark_image=imagem_original,
-                size=(500, 300)
-            )
-
-            self.logo_fundo = ctk.CTkLabel(
-                self.conteudo,
-                text="",
-                image=self.logo_fundo_imagem
-            )
-
-            self.logo_fundo.place(
-                relx=0.5,
-                rely=0.55,
-                anchor="center"
-            )
-
-        else:
-
-            print(
-                "ERRO: A imagem logo_orcamento.png não foi encontrada."
-            )
-
-        # ==================================================
-        # TÍTULO
-        # ==================================================
+        self.cabecalho.pack_propagate(
+            False
+        )
 
         self.titulo = ctk.CTkLabel(
+
+            self.cabecalho,
+
+            text="Dashboard",
+
+            font=(
+                "Arial",
+                26,
+                "bold"
+            ),
+
+            text_color=COR_TEXTO
+
+        )
+
+        self.titulo.pack(
+
+            side="left",
+
+            padx=30
+
+        )
+
+        # --------------------------------------------------
+        # BOTÃO ATUALIZAR
+        # --------------------------------------------------
+
+        self.botao_atualizar = ctk.CTkButton(
+
+            self.cabecalho,
+
+            text="🔄 Atualizar",
+
+            width=120,
+
+            height=36,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=self.atualizar_dashboard
+
+        )
+
+        self.botao_atualizar.pack(
+
+            side="right",
+
+            padx=25
+
+        )
+
+        # --------------------------------------------------
+        # ÁREA DAS PÁGINAS
+        # --------------------------------------------------
+
+        self.pagina = ctk.CTkScrollableFrame(
+
             self.conteudo,
-            text="Bem-vindo ao OrçaSmart",
-            font=("Arial", 28, "bold"),
-            text_color="#222222"
+
+            corner_radius=0,
+
+            fg_color=COR_FUNDO
+
         )
 
-        self.titulo.place(
-            relx=0.5,
-            rely=0.10,
-            anchor="center"
+        self.pagina.pack(
+
+            fill="both",
+
+            expand=True,
+
+            padx=10,
+
+            pady=10
+
         )
 
-        # ==================================================
-        # FRAME DAS PÁGINAS
-        # ==================================================
+    # ======================================================
+    # LIMPAR PÁGINA
+    # ======================================================
 
-        self.pagina = ctk.CTkFrame(
-            self.conteudo,
-            fg_color="transparent",
-            corner_radius=0
-        )
+    def limpar_pagina(self):
 
-        self.pagina.place(
-            relx=0,
-            rely=0.18,
-            relwidth=1,
-            relheight=0.82
-        )
+        for widget in self.pagina.winfo_children():
+
+            widget.destroy()
 
     # ======================================================
     # DASHBOARD
@@ -218,803 +456,2770 @@ class Sistema(ctk.CTk):
 
     def abrir_dashboard(self):
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self.limpar_pagina()
 
         self.titulo.configure(
-            text="Bem-vindo ao OrçaSmart"
+
+            text="Dashboard"
+
         )
 
-        mensagem = ctk.CTkLabel(
-            self.pagina,
-            text=(
-                "Sistema de gerenciamento de orçamentos\n\n"
-                "Selecione uma opção no menu lateral."
-            ),
-            font=("Arial", 20),
-            text_color="#333333"
+        # --------------------------------------------------
+        # BUSCAR DADOS
+        # --------------------------------------------------
+
+        clientes = listar_clientes()
+
+        orcamentos = listar_orcamentos()
+
+        total_clientes = len(
+            clientes
         )
 
-        mensagem.pack(
-            pady=50
+        total_orcamentos = len(
+            orcamentos
         )
 
-    # ======================================================
-    # TELA DE CLIENTES
-    # ======================================================
+        # --------------------------------------------------
+        # CONTADORES
+        # --------------------------------------------------
 
-    def abrir_clientes(self):
+        aprovados = 0
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        pendentes = 0
 
-        self.titulo.configure(
-            text="Cadastro de Clientes"
-        )
+        recusados = 0
 
-        campo_nome = ctk.CTkEntry(
-            self.pagina,
-            placeholder_text="Digite o nome do cliente",
-            width=400,
-            height=40
-        )
+        concluidos = 0
 
-        campo_nome.pack(
-            pady=10
-        )
+        valor_total = 0
 
-        campo_telefone = ctk.CTkEntry(
-            self.pagina,
-            placeholder_text="Digite o telefone",
-            width=400,
-            height=40
-        )
+        for orcamento in orcamentos:
 
-        campo_telefone.pack(
-            pady=10
-        )
+            try:
 
-        botao_cadastrar = ctk.CTkButton(
-            self.pagina,
-            text="Cadastrar Cliente",
-            width=200,
-            height=40,
-            command=lambda: self.cadastrar_cliente(
-                campo_nome,
-                campo_telefone
+                valor_total += float(
+
+                    orcamento["valor_total"]
+
+                    or 0
+
+                )
+
+            except (
+                ValueError,
+                TypeError,
+                KeyError
+            ):
+
+                pass
+
+            status = (
+
+                str(
+
+                    orcamento["status"]
+
+                    or "Pendente"
+
+                )
+
+                .strip()
+
+                .lower()
+
             )
-        )
 
-        botao_cadastrar.pack(
-            pady=15
-        )
+            if status == "aprovado":
 
-        botao_listar = ctk.CTkButton(
+                aprovados += 1
+
+            elif status == "pendente":
+
+                pendentes += 1
+
+            elif status == "recusado":
+
+                recusados += 1
+
+            elif status == "concluído" or status == "concluido":
+
+                concluidos += 1
+
+        # --------------------------------------------------
+        # TAXA DE APROVAÇÃO
+        # --------------------------------------------------
+
+        if total_orcamentos > 0:
+
+            taxa_aprovacao = (
+
+                aprovados /
+
+                total_orcamentos
+
+            ) * 100
+
+        else:
+
+            taxa_aprovacao = 0
+
+        # --------------------------------------------------
+        # TÍTULO
+        # --------------------------------------------------
+
+        titulo_dashboard = ctk.CTkLabel(
+
             self.pagina,
-            text="Listar Clientes",
-            width=200,
-            height=40,
-            command=self.listar_clientes
+
+            text=(
+                "Visão geral do OrçaSmart"
+            ),
+
+            font=(
+                "Arial",
+                22,
+                "bold"
+            ),
+
+            text_color=COR_TEXTO
+
         )
 
-        botao_listar.pack(
+        titulo_dashboard.pack(
+
+            anchor="w",
+
+            padx=20,
+
+            pady=(
+                10,
+                20
+            )
+
+        )
+
+        # --------------------------------------------------
+        # CARDS
+        # --------------------------------------------------
+
+        cards = ctk.CTkFrame(
+
+            self.pagina,
+
+            fg_color="transparent"
+
+        )
+
+        cards.pack(
+
+            fill="x",
+
+            padx=10,
+
+            pady=5
+
+        )
+
+        for coluna in range(4):
+
+            cards.grid_columnconfigure(
+
+                coluna,
+
+                weight=1
+
+            )
+
+        # --------------------------------------------------
+        # CARD 1
+        # --------------------------------------------------
+
+        self.criar_card_dashboard(
+
+            cards,
+
+            "👤",
+
+            "Clientes",
+
+            str(total_clientes)
+
+        ).grid(
+
+            row=0,
+
+            column=0,
+
+            padx=8,
+
+            pady=8,
+
+            sticky="nsew"
+
+        )
+
+        # --------------------------------------------------
+        # CARD 2
+        # --------------------------------------------------
+
+        self.criar_card_dashboard(
+
+            cards,
+
+            "📋",
+
+            "Orçamentos",
+
+            str(total_orcamentos)
+
+        ).grid(
+
+            row=0,
+
+            column=1,
+
+            padx=8,
+
+            pady=8,
+
+            sticky="nsew"
+
+        )
+
+        # --------------------------------------------------
+        # CARD 3
+        # --------------------------------------------------
+
+        self.criar_card_dashboard(
+
+            cards,
+
+            "✅",
+
+            "Aprovados",
+
+            str(aprovados)
+
+        ).grid(
+
+            row=0,
+
+            column=2,
+
+            padx=8,
+
+            pady=8,
+
+            sticky="nsew"
+
+        )
+
+        # --------------------------------------------------
+        # CARD 4
+        # --------------------------------------------------
+
+        self.criar_card_dashboard(
+
+            cards,
+
+            "💰",
+
+            "Valor Total",
+
+            formatar_moeda(
+
+                valor_total
+
+            )
+
+        ).grid(
+
+            row=0,
+
+            column=3,
+
+            padx=8,
+
+            pady=8,
+
+            sticky="nsew"
+
+        )
+
+        # --------------------------------------------------
+        # ÁREA DOS GRÁFICOS
+        # --------------------------------------------------
+
+        graficos = ctk.CTkFrame(
+
+            self.pagina,
+
+            fg_color="transparent"
+
+        )
+
+        graficos.pack(
+
+            fill="x",
+
+            expand=False,
+
+            padx=10,
+
+            pady=15
+
+        )
+
+        graficos.grid_columnconfigure(
+
+            0,
+
+            weight=1
+
+        )
+
+        graficos.grid_columnconfigure(
+
+            1,
+
+            weight=1
+
+        )
+
+        # --------------------------------------------------
+        # GRÁFICO DE STATUS
+        # --------------------------------------------------
+
+        frame_status = ctk.CTkFrame(
+
+            graficos,
+
+            corner_radius=15,
+
+            fg_color=COR_CARD
+
+        )
+
+        frame_status.grid(
+
+            row=0,
+
+            column=0,
+
+            padx=8,
+
+            sticky="nsew"
+
+        )
+
+        ctk.CTkLabel(
+
+            frame_status,
+
+            text="Distribuição dos Orçamentos",
+
+            font=(
+
+                "Arial",
+
+                17,
+
+                "bold"
+
+            ),
+
+            text_color=COR_TEXTO
+
+        ).pack(
+
             pady=10
+
+        )
+
+        self.criar_grafico_status(
+
+            frame_status,
+
+            pendentes,
+
+            aprovados,
+
+            recusados,
+
+            concluidos
+
+        )
+
+        # --------------------------------------------------
+        # GRÁFICO FINANCEIRO
+        # --------------------------------------------------
+
+        frame_valores = ctk.CTkFrame(
+
+            graficos,
+
+            corner_radius=15,
+
+            fg_color=COR_CARD
+
+        )
+
+        frame_valores.grid(
+
+            row=0,
+
+            column=1,
+
+            padx=8,
+
+            sticky="nsew"
+
+        )
+
+        ctk.CTkLabel(
+
+            frame_valores,
+
+            text="Valor por Status",
+
+            font=(
+
+                "Arial",
+
+                17,
+
+                "bold"
+
+            ),
+
+            text_color=COR_TEXTO
+
+        ).pack(
+
+            pady=10
+
+        )
+
+        self.criar_grafico_valores(
+
+            frame_valores,
+
+            orcamentos
+
+        )
+
+        # --------------------------------------------------
+        # ÁREA INFERIOR
+        # --------------------------------------------------
+
+        inferior = ctk.CTkFrame(
+
+            self.pagina,
+
+            fg_color="transparent"
+
+        )
+
+        inferior.pack(
+
+            fill="x",
+
+            padx=10,
+
+            pady=10
+
+        )
+
+        inferior.grid_columnconfigure(
+
+            0,
+
+            weight=1
+
+        )
+
+        inferior.grid_columnconfigure(
+
+            1,
+
+            weight=2
+
+        )
+
+        # --------------------------------------------------
+        # RESUMO
+        # --------------------------------------------------
+
+        self.criar_resumo_dashboard(
+
+            inferior,
+
+            total_orcamentos,
+
+            aprovados,
+
+            pendentes,
+
+            recusados,
+
+            concluidos,
+
+            taxa_aprovacao
+
+        ).grid(
+
+            row=0,
+
+            column=0,
+
+            padx=8,
+
+            sticky="nsew"
+
+        )
+
+        # --------------------------------------------------
+        # ÚLTIMOS ORÇAMENTOS
+        # --------------------------------------------------
+
+        self.criar_ultimos_orcamentos(
+
+            inferior,
+
+            orcamentos
+
+        ).grid(
+
+            row=0,
+
+            column=1,
+
+            padx=8,
+
+            sticky="nsew"
+
         )
 
     # ======================================================
-    # CADASTRAR CLIENTE
+    # CARD DO DASHBOARD
     # ======================================================
 
-    def cadastrar_cliente(
+    def criar_card_dashboard(
+
         self,
-        campo_nome,
-        campo_telefone
+
+        parent,
+
+        icone,
+
+        titulo,
+
+        valor
+
     ):
 
-        nome = campo_nome.get().strip()
-        telefone = campo_telefone.get().strip()
+        card = ctk.CTkFrame(
 
-        if nome == "":
+            parent,
 
-            messagebox.showwarning(
-                "Atenção",
-                "Digite o nome do cliente."
+            height=130,
+
+            corner_radius=15,
+
+            fg_color=COR_CARD,
+
+            border_width=1,
+
+            border_color=COR_BORDA
+
+        )
+
+        card.grid_propagate(
+
+            False
+
+        )
+
+        ctk.CTkLabel(
+
+            card,
+
+            text=icone,
+
+            font=(
+
+                "Arial",
+
+                25
+
+            )
+
+        ).pack(
+
+            pady=(
+
+                15,
+
+                0
+
+            )
+
+        )
+
+        ctk.CTkLabel(
+
+            card,
+
+            text=titulo,
+
+            font=(
+
+                "Arial",
+
+                13
+
+            ),
+
+            text_color=COR_TEXTO_SECUNDARIO
+
+        ).pack(
+
+            pady=3
+
+        )
+
+        ctk.CTkLabel(
+
+            card,
+
+            text=valor,
+
+            font=(
+
+                "Arial",
+
+                21,
+
+                "bold"
+
+            ),
+
+            text_color=COR_PRINCIPAL
+
+        ).pack()
+
+        return card
+
+    # ======================================================
+    # GRÁFICO DE STATUS
+    # ======================================================
+
+    def criar_grafico_status(
+
+        self,
+
+        parent,
+
+        pendentes,
+
+        aprovados,
+
+        recusados,
+
+        concluidos
+
+    ):
+
+        valores = [
+
+            pendentes,
+
+            aprovados,
+
+            recusados,
+
+            concluidos
+
+        ]
+
+        nomes = [
+
+            "Pendente",
+
+            "Aprovado",
+
+            "Recusado",
+
+            "Concluído"
+
+        ]
+
+        # --------------------------------------------------
+        # SE NÃO EXISTIREM DADOS
+        # --------------------------------------------------
+
+        if sum(valores) == 0:
+
+            ctk.CTkLabel(
+
+                parent,
+
+                text="Nenhum orçamento cadastrado.",
+
+                font=(
+
+                    "Arial",
+
+                    14
+
+                ),
+
+                text_color=COR_TEXTO_SECUNDARIO
+
+            ).pack(
+
+                pady=60
+
             )
 
             return
 
-        conexao = sqlite3.connect(
-            "orcamentos.db"
+        # --------------------------------------------------
+        # FIGURA
+        # --------------------------------------------------
+
+        figura = Figure(
+
+            figsize=(
+
+                4.5,
+
+                3.2
+
+            ),
+
+            dpi=90
+
         )
 
-        cursor = conexao.cursor()
+        eixo = figura.add_subplot(
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS clientes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL,
-                telefone TEXT
-            )
-        """)
+            111
 
-        cursor.execute("""
-            INSERT INTO clientes (
-                nome,
-                telefone
-            )
-            VALUES (?, ?)
-        """, (
-            nome,
-            telefone
-        ))
-
-        conexao.commit()
-        conexao.close()
-
-        messagebox.showinfo(
-            "Sucesso",
-            "Cliente cadastrado com sucesso!"
         )
 
-        campo_nome.delete(
-            0,
-            "end"
+        eixo.pie(
+
+            valores,
+
+            labels=nomes,
+
+            autopct="%1.0f%%",
+
+            startangle=90,
+
+            wedgeprops={
+
+                "width": 0.42,
+
+                "edgecolor": "white"
+
+            }
+
         )
 
-        campo_telefone.delete(
-            0,
-            "end"
+        eixo.set_title(
+
+            "Status dos Orçamentos",
+
+            fontsize=11
+
+        )
+
+        figura.tight_layout()
+
+        canvas = FigureCanvasTkAgg(
+
+            figura,
+
+            master=parent
+
+        )
+
+        canvas.draw()
+
+        canvas.get_tk_widget().pack(
+
+            fill="both",
+
+            expand=True,
+
+            padx=10,
+
+            pady=5
+
         )
 
     # ======================================================
-    # LISTAR CLIENTES
+    # GRÁFICO DE VALORES
     # ======================================================
 
-    def listar_clientes(self):
+    def criar_grafico_valores(
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self,
+
+        parent,
+
+        orcamentos
+
+    ):
+
+        valores_status = {
+
+            "Pendente": 0,
+
+            "Aprovado": 0,
+
+            "Recusado": 0,
+
+            "Concluído": 0
+
+        }
+
+        for orcamento in orcamentos:
+
+            status = str(
+
+                orcamento["status"]
+
+                or "Pendente"
+
+            ).strip().lower()
+
+            try:
+
+                valor = float(
+
+                    orcamento["valor_total"]
+
+                    or 0
+
+                )
+
+            except (
+
+                ValueError,
+
+                TypeError
+
+            ):
+
+                valor = 0
+
+            if status == "pendente":
+
+                valores_status["Pendente"] += valor
+
+            elif status == "aprovado":
+
+                valores_status["Aprovado"] += valor
+
+            elif status == "recusado":
+
+                valores_status["Recusado"] += valor
+
+            elif status in (
+
+                "concluído",
+
+                "concluido"
+
+            ):
+
+                valores_status["Concluído"] += valor
+
+        if not orcamentos:
+
+            ctk.CTkLabel(
+
+                parent,
+
+                text="Nenhum orçamento cadastrado.",
+
+                font=(
+
+                    "Arial",
+
+                    14
+
+                ),
+
+                text_color=COR_TEXTO_SECUNDARIO
+
+            ).pack(
+
+                pady=60
+
+            )
+
+            return
+
+        figura = Figure(
+
+            figsize=(
+
+                5,
+
+                3.2
+
+            ),
+
+            dpi=90
+
+        )
+
+        eixo = figura.add_subplot(
+
+            111
+
+        )
+
+        nomes = list(
+
+            valores_status.keys()
+
+        )
+
+        valores = list(
+
+            valores_status.values()
+
+        )
+
+        eixo.bar(
+
+            nomes,
+
+            valores
+
+        )
+
+        eixo.set_ylabel(
+
+            "Valor (R$)"
+
+        )
+
+        eixo.tick_params(
+
+            axis="x",
+
+            rotation=15
+
+        )
+
+        eixo.grid(
+
+            axis="y",
+
+            alpha=0.2
+
+        )
+
+        figura.tight_layout()
+
+        canvas = FigureCanvasTkAgg(
+
+            figura,
+
+            master=parent
+
+        )
+
+        canvas.draw()
+
+        canvas.get_tk_widget().pack(
+
+            fill="both",
+
+            expand=True,
+
+            padx=10,
+
+            pady=5
+
+        )
+
+    # ======================================================
+    # RESUMO DO DASHBOARD
+    # ======================================================
+
+    def criar_resumo_dashboard(
+
+        self,
+
+        parent,
+
+        total,
+
+        aprovados,
+
+        pendentes,
+
+        recusados,
+
+        concluidos,
+
+        taxa
+
+    ):
+
+        frame = ctk.CTkFrame(
+
+            parent,
+
+            corner_radius=15,
+
+            fg_color=COR_CARD,
+
+            border_width=1,
+
+            border_color=COR_BORDA
+
+        )
+
+        ctk.CTkLabel(
+
+            frame,
+
+            text="Resumo de Desempenho",
+
+            font=(
+
+                "Arial",
+
+                17,
+
+                "bold"
+
+            ),
+
+            text_color=COR_TEXTO
+
+        ).pack(
+
+            anchor="w",
+
+            padx=20,
+
+            pady=(
+
+                20,
+
+                15
+
+            )
+
+        )
+
+        dados = [
+
+            (
+
+                "Total de Orçamentos",
+
+                total
+
+            ),
+
+            (
+
+                "Aprovados",
+
+                aprovados
+
+            ),
+
+            (
+
+                "Pendentes",
+
+                pendentes
+
+            ),
+
+            (
+
+                "Recusados",
+
+                recusados
+
+            ),
+
+            (
+
+                "Concluídos",
+
+                concluidos
+
+            ),
+
+            (
+
+                "Taxa de Aprovação",
+
+                f"{taxa:.1f}%"
+
+            )
+
+        ]
+
+        for nome, valor in dados:
+
+            linha = ctk.CTkFrame(
+
+                frame,
+
+                fg_color="transparent"
+
+            )
+
+            linha.pack(
+
+                fill="x",
+
+                padx=20,
+
+                pady=6
+
+            )
+
+            ctk.CTkLabel(
+
+                linha,
+
+                text=nome,
+
+                font=(
+
+                    "Arial",
+
+                    13
+
+                ),
+
+                text_color=COR_TEXTO_SECUNDARIO
+
+            ).pack(
+
+                side="left"
+
+            )
+
+            ctk.CTkLabel(
+
+                linha,
+
+                text=str(valor),
+
+                font=(
+
+                    "Arial",
+
+                    13,
+
+                    "bold"
+
+                ),
+
+                text_color=COR_PRINCIPAL
+
+            ).pack(
+
+                side="right"
+
+            )
+
+        return frame
+
+    # ======================================================
+    # ÚLTIMOS ORÇAMENTOS
+    # ======================================================
+
+    def criar_ultimos_orcamentos(
+
+        self,
+
+        parent,
+
+        orcamentos
+
+    ):
+
+        frame = ctk.CTkFrame(
+
+            parent,
+
+            corner_radius=15,
+
+            fg_color=COR_CARD,
+
+            border_width=1,
+
+            border_color=COR_BORDA
+
+        )
+
+        ctk.CTkLabel(
+
+            frame,
+
+            text="Últimos Orçamentos",
+
+            font=(
+
+                "Arial",
+
+                17,
+
+                "bold"
+
+            ),
+
+            text_color=COR_TEXTO
+
+        ).pack(
+
+            anchor="w",
+
+            padx=20,
+
+            pady=(
+
+                20,
+
+                15
+
+            )
+
+        )
+
+        ultimos = orcamentos[:6]
+
+        if not ultimos:
+
+            ctk.CTkLabel(
+
+                frame,
+
+                text="Nenhum orçamento cadastrado.",
+
+                text_color=COR_TEXTO_SECUNDARIO
+
+            ).pack(
+
+                pady=30
+
+            )
+
+            return frame
+
+        for orcamento in ultimos:
+
+            linha = ctk.CTkFrame(
+
+                frame,
+
+                fg_color="#F8FAFC",
+
+                corner_radius=8
+
+            )
+
+            linha.pack(
+
+                fill="x",
+
+                padx=15,
+
+                pady=4
+
+            )
+
+            texto = (
+
+                f"#{orcamento['id']}  "
+
+                f"{orcamento['cliente_nome']}  |  "
+
+                f"{orcamento['servico']}"
+
+            )
+
+            ctk.CTkLabel(
+
+                linha,
+
+                text=texto,
+
+                font=(
+
+                    "Arial",
+
+                    12,
+
+                    "bold"
+
+                ),
+
+                anchor="w"
+
+            ).pack(
+
+                side="left",
+
+                padx=10,
+
+                pady=8
+
+            )
+
+            ctk.CTkLabel(
+
+                linha,
+
+                text=formatar_moeda(
+
+                    orcamento["valor_total"]
+
+                ),
+
+                font=(
+
+                    "Arial",
+
+                    11,
+
+                    "bold"
+
+                ),
+
+                text_color=COR_PRINCIPAL
+
+            ).pack(
+
+                side="right",
+
+                padx=10
+
+            )
+
+        return frame
+
+    # ======================================================
+    # ATUALIZAR DASHBOARD
+    # ======================================================
+
+    def atualizar_dashboard(self):
+
+        self.abrir_dashboard()
+
+    # ======================================================
+    # CLIENTES
+    # ======================================================
+
+    def abrir_clientes(self):
+
+        self.limpar_pagina()
 
         self.titulo.configure(
-            text="Clientes Cadastrados"
+
+            text="Gerenciamento de Clientes"
+
         )
 
-        conexao = sqlite3.connect(
-            "orcamentos.db"
+        topo = ctk.CTkFrame(
+
+            self.pagina,
+
+            fg_color="transparent"
+
         )
 
-        cursor = conexao.cursor()
+        topo.pack(
 
-        cursor.execute("""
-            SELECT
-                id,
-                nome,
-                telefone
-            FROM clientes
-            ORDER BY nome
-        """)
+            fill="x",
 
-        clientes = cursor.fetchall()
+            pady=10
 
-        conexao.close()
+        )
+
+        # --------------------------------------------------
+        # NOVO CLIENTE
+        # --------------------------------------------------
+
+        ctk.CTkButton(
+
+            topo,
+
+            text="+ Novo Cliente",
+
+            width=160,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=self.abrir_formulario_cliente
+
+        ).pack(
+
+            side="left"
+
+        )
+
+        # --------------------------------------------------
+        # PESQUISA
+        # --------------------------------------------------
+
+        self.campo_busca_cliente = ctk.CTkEntry(
+
+            topo,
+
+            placeholder_text=(
+
+                "Pesquisar por nome ou telefone..."
+
+            ),
+
+            width=350
+
+        )
+
+        self.campo_busca_cliente.pack(
+
+            side="right",
+
+            padx=10
+
+        )
+
+        ctk.CTkButton(
+
+            topo,
+
+            text="🔍 Pesquisar",
+
+            width=120,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=self.buscar_clientes_interface
+
+        ).pack(
+
+            side="right"
+
+        )
+
+        # --------------------------------------------------
+        # LISTA
+        # --------------------------------------------------
+
+        self.lista_clientes_frame = (
+
+            ctk.CTkScrollableFrame(
+
+                self.pagina,
+
+                fg_color="transparent"
+
+            )
+
+        )
+
+        self.lista_clientes_frame.pack(
+
+            fill="both",
+
+            expand=True,
+
+            pady=15
+
+        )
+
+        self.exibir_clientes()
+
+    # ======================================================
+    # FORMULÁRIO CLIENTE
+    # ======================================================
+
+    def abrir_formulario_cliente(
+
+        self,
+
+        cliente=None
+
+    ):
+
+        janela = ctk.CTkToplevel(
+
+            self
+
+        )
+
+        janela.title(
+
+            "Editar Cliente"
+
+            if cliente
+
+            else "Novo Cliente"
+
+        )
+
+        janela.geometry(
+
+            "450x350"
+
+        )
+
+        janela.resizable(
+
+            False,
+
+            False
+
+        )
+
+        janela.grab_set()
+
+        ctk.CTkLabel(
+
+            janela,
+
+            text=(
+
+                "Editar Cliente"
+
+                if cliente
+
+                else "Cadastrar Cliente"
+
+            ),
+
+            font=(
+
+                "Arial",
+
+                24,
+
+                "bold"
+
+            )
+
+        ).pack(
+
+            pady=25
+
+        )
+
+        campo_nome = ctk.CTkEntry(
+
+            janela,
+
+            placeholder_text="Nome do cliente",
+
+            width=350
+
+        )
+
+        campo_nome.pack(
+
+            pady=10
+
+        )
+
+        campo_telefone = ctk.CTkEntry(
+
+            janela,
+
+            placeholder_text="Telefone",
+
+            width=350
+
+        )
+
+        campo_telefone.pack(
+
+            pady=10
+
+        )
+
+        if cliente:
+
+            campo_nome.insert(
+
+                0,
+
+                cliente["nome"]
+
+            )
+
+            campo_telefone.insert(
+
+                0,
+
+                cliente["telefone"]
+
+                or ""
+
+            )
+
+        def salvar():
+
+            nome = (
+
+                campo_nome
+
+                .get()
+
+                .strip()
+
+            )
+
+            telefone = (
+
+                campo_telefone
+
+                .get()
+
+                .strip()
+
+            )
+
+            if cliente:
+
+                sucesso, mensagem = editar_cliente(
+
+                    cliente["id"],
+
+                    nome,
+
+                    telefone
+
+                )
+
+            else:
+
+                sucesso, mensagem = cadastrar_cliente(
+
+                    nome,
+
+                    telefone
+
+                )
+
+            if sucesso:
+
+                messagebox.showinfo(
+
+                    "Sucesso",
+
+                    mensagem
+
+                )
+
+                janela.destroy()
+
+                self.abrir_clientes()
+
+            else:
+
+                messagebox.showerror(
+
+                    "Erro",
+
+                    mensagem
+
+                )
+
+        ctk.CTkButton(
+
+            janela,
+
+            text="Salvar",
+
+            width=200,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=salvar
+
+        ).pack(
+
+            pady=25
+
+        )
+
+    # ======================================================
+    # EXIBIR CLIENTES
+    # ======================================================
+
+    def exibir_clientes(
+
+        self,
+
+        clientes=None
+
+    ):
+
+        for widget in (
+
+            self.lista_clientes_frame
+
+            .winfo_children()
+
+        ):
+
+            widget.destroy()
+
+        if clientes is None:
+
+            clientes = listar_clientes()
 
         if not clientes:
 
-            mensagem = ctk.CTkLabel(
-                self.pagina,
-                text="Nenhum cliente cadastrado.",
-                font=("Arial", 18)
-            )
+            ctk.CTkLabel(
 
-            mensagem.pack(
+                self.lista_clientes_frame,
+
+                text="Nenhum cliente encontrado.",
+
+                font=(
+
+                    "Arial",
+
+                    18
+
+                )
+
+            ).pack(
+
                 pady=30
+
             )
 
             return
 
         for cliente in clientes:
 
-            id_cliente = cliente[0]
-            nome = cliente[1]
-            telefone = cliente[2] or "Não informado"
+            frame = ctk.CTkFrame(
+
+                self.lista_clientes_frame,
+
+                corner_radius=10,
+
+                fg_color=COR_CARD
+
+            )
+
+            frame.pack(
+
+                fill="x",
+
+                pady=5,
+
+                padx=5
+
+            )
 
             texto = (
-                f"ID: {id_cliente}  |  "
-                f"Nome: {nome}  |  "
-                f"Telefone: {telefone}"
+
+                f"{cliente['nome']}  |  "
+
+                f"{cliente['telefone'] or 'Sem telefone'}"
+
             )
 
-            cliente_label = ctk.CTkLabel(
-                self.pagina,
+            ctk.CTkLabel(
+
+                frame,
+
                 text=texto,
-                font=("Arial", 16)
+
+                font=(
+
+                    "Arial",
+
+                    15
+
+                ),
+
+                anchor="w"
+
+            ).pack(
+
+                side="left",
+
+                padx=15,
+
+                pady=15
+
             )
 
-            cliente_label.pack(
-                pady=5
+            ctk.CTkButton(
+
+                frame,
+
+                text="Excluir",
+
+                width=80,
+
+                command=lambda c=cliente:
+
+                    self.confirmar_exclusao_cliente(c)
+
+            ).pack(
+
+                side="right",
+
+                padx=5
+
+            )
+
+            ctk.CTkButton(
+
+                frame,
+
+                text="Editar",
+
+                width=80,
+
+                command=lambda c=cliente:
+
+                    self.abrir_formulario_cliente(c)
+
+            ).pack(
+
+                side="right",
+
+                padx=5
+
             )
 
     # ======================================================
-    # TELA DE ORÇAMENTOS
+    # PESQUISAR CLIENTES
+    # ======================================================
+
+    def buscar_clientes_interface(self):
+
+        termo = (
+
+            self.campo_busca_cliente
+
+            .get()
+
+        )
+
+        clientes = pesquisar_clientes(
+
+            termo
+
+        )
+
+        self.exibir_clientes(
+
+            clientes
+
+        )
+
+    # ======================================================
+    # EXCLUIR CLIENTE
+    # ======================================================
+
+    def confirmar_exclusao_cliente(
+
+        self,
+
+        cliente
+
+    ):
+
+        confirmar = messagebox.askyesno(
+
+            "Confirmar exclusão",
+
+            (
+
+                f"Deseja excluir o cliente "
+
+                f"'{cliente['nome']}'?"
+
+            )
+
+        )
+
+        if not confirmar:
+
+            return
+
+        sucesso, mensagem = excluir_cliente(
+
+            cliente["id"]
+
+        )
+
+        if sucesso:
+
+            messagebox.showinfo(
+
+                "Sucesso",
+
+                mensagem
+
+            )
+
+            self.abrir_clientes()
+
+        else:
+
+            messagebox.showerror(
+
+                "Não foi possível excluir",
+
+                mensagem
+
+            )
+
+    # ======================================================
+    # ORÇAMENTOS
     # ======================================================
 
     def abrir_orcamentos(self):
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self.limpar_pagina()
 
         self.titulo.configure(
+
             text="Gerenciamento de Orçamentos"
+
         )
 
-        botao_novo = ctk.CTkButton(
+        topo = ctk.CTkFrame(
+
             self.pagina,
-            text="➕ Novo Orçamento",
-            width=200,
-            height=40,
-            command=self.novo_orcamento
+
+            fg_color="transparent"
+
         )
 
-        botao_novo.pack(
+        topo.pack(
+
+            fill="x",
+
             pady=10
+
         )
 
-        botao_listar = ctk.CTkButton(
-            self.pagina,
-            text="📋 Listar Orçamentos",
-            width=200,
-            height=40,
-            command=self.listar_orcamentos_interface
+        ctk.CTkButton(
+
+            topo,
+
+            text="+ Novo Orçamento",
+
+            width=180,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=self.abrir_formulario_orcamento
+
+        ).pack(
+
+            side="left"
+
         )
 
-        botao_listar.pack(
-            pady=10
+        self.campo_busca_orcamento = ctk.CTkEntry(
+
+            topo,
+
+            placeholder_text=(
+
+                "Cliente, telefone ou serviço..."
+
+            ),
+
+            width=350
+
         )
+
+        self.campo_busca_orcamento.pack(
+
+            side="right",
+
+            padx=10
+
+        )
+
+        ctk.CTkButton(
+
+            topo,
+
+            text="🔍 Pesquisar",
+
+            width=120,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=self.buscar_orcamentos_interface
+
+        ).pack(
+
+            side="right"
+
+        )
+
+        self.lista_orcamentos_frame = (
+
+            ctk.CTkScrollableFrame(
+
+                self.pagina,
+
+                fg_color="transparent"
+
+            )
+
+        )
+
+        self.lista_orcamentos_frame.pack(
+
+            fill="both",
+
+            expand=True,
+
+            pady=15
+
+        )
+
+        self.exibir_orcamentos()
 
     # ======================================================
-    # NOVO ORÇAMENTO
+    # FORMULÁRIO ORÇAMENTO
     # ======================================================
 
-    def novo_orcamento(self):
+    def abrir_formulario_orcamento(
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self,
 
-        self.titulo.configure(
-            text="Novo Orçamento"
-        )
+        orcamento=None
 
-        # BUSCAR CLIENTES
+    ):
 
-        conexao = sqlite3.connect(
-            "orcamentos.db"
-        )
-
-        cursor = conexao.cursor()
-
-        cursor.execute("""
-            SELECT id, nome
-            FROM clientes
-            ORDER BY nome
-        """)
-
-        clientes = cursor.fetchall()
-
-        conexao.close()
-
-        # VERIFICAR CLIENTES
+        clientes = listar_clientes()
 
         if not clientes:
 
-            mensagem = ctk.CTkLabel(
-                self.pagina,
-                text=(
-                    "Nenhum cliente cadastrado.\n\n"
-                    "Cadastre um cliente antes de criar um orçamento."
-                ),
-                font=("Arial", 18)
-            )
+            messagebox.showwarning(
 
-            mensagem.pack(
-                pady=50
+                "Atenção",
+
+                (
+
+                    "Nenhum cliente cadastrado.\n\n"
+
+                    "Cadastre um cliente antes "
+
+                    "de criar um orçamento."
+
+                )
+
             )
 
             return
 
-        # CLIENTES
+        janela = ctk.CTkToplevel(
 
-        label_cliente = ctk.CTkLabel(
-            self.pagina,
-            text="Cliente:"
+            self
+
         )
 
-        label_cliente.pack(
-            pady=(10, 2)
+        janela.title(
+
+            "Editar Orçamento"
+
+            if orcamento
+
+            else "Novo Orçamento"
+
         )
 
-        clientes_dict = {
-            f"{cliente[0]} - {cliente[1]}": cliente[0]
+        janela.geometry(
+
+            "500x650"
+
+        )
+
+        janela.resizable(
+
+            False,
+
+            False
+
+        )
+
+        janela.grab_set()
+
+        ctk.CTkLabel(
+
+            janela,
+
+            text=(
+
+                "Editar Orçamento"
+
+                if orcamento
+
+                else "Novo Orçamento"
+
+            ),
+
+            font=(
+
+                "Arial",
+
+                24,
+
+                "bold"
+
+            )
+
+        ).pack(
+
+            pady=20
+
+        )
+
+        ctk.CTkLabel(
+
+            janela,
+
+            text="Cliente"
+
+        ).pack()
+
+        nomes_clientes = [
+
+            f"{cliente['id']} - "
+
+            f"{cliente['nome']}"
+
             for cliente in clientes
-        }
+
+        ]
 
         combo_cliente = ctk.CTkComboBox(
-            self.pagina,
-            values=list(clientes_dict.keys()),
-            width=400,
-            height=40
+
+            janela,
+
+            values=nomes_clientes,
+
+            width=350
+
         )
 
         combo_cliente.pack(
-            pady=5
-        )
 
-        combo_cliente.set(
-            list(clientes_dict.keys())[0]
-        )
+            pady=10
 
-        # SERVIÇO
-
-        label_servico = ctk.CTkLabel(
-            self.pagina,
-            text="Serviço:"
-        )
-
-        label_servico.pack(
-            pady=(10, 2)
         )
 
         campo_servico = ctk.CTkEntry(
-            self.pagina,
-            placeholder_text="Ex: Drywall, Forro de Gesso...",
-            width=400,
-            height=40
+
+            janela,
+
+            placeholder_text="Serviço",
+
+            width=350
+
         )
 
         campo_servico.pack(
-            pady=5
-        )
 
-        # ÁREA
+            pady=10
 
-        label_area = ctk.CTkLabel(
-            self.pagina,
-            text="Área (m²):"
-        )
-
-        label_area.pack(
-            pady=(10, 2)
         )
 
         campo_area = ctk.CTkEntry(
-            self.pagina,
-            placeholder_text="Ex: 20",
-            width=400,
-            height=40
+
+            janela,
+
+            placeholder_text="Área em m²",
+
+            width=350
+
         )
 
         campo_area.pack(
-            pady=5
-        )
 
-        # VALOR M²
+            pady=10
 
-        label_valor = ctk.CTkLabel(
-            self.pagina,
-            text="Valor por m²:"
-        )
-
-        label_valor.pack(
-            pady=(10, 2)
         )
 
         campo_valor_m2 = ctk.CTkEntry(
-            self.pagina,
-            placeholder_text="Ex: 120",
-            width=400,
-            height=40
+
+            janela,
+
+            placeholder_text="Valor por m²",
+
+            width=350
+
         )
 
         campo_valor_m2.pack(
-            pady=5
-        )
 
-        # VALOR TOTAL
+            pady=10
 
-        label_total = ctk.CTkLabel(
-            self.pagina,
-            text="Valor total: R$ 0,00",
-            font=("Arial", 20, "bold")
-        )
-
-        label_total.pack(
-            pady=15
-        )
-
-        # STATUS
-
-        label_status = ctk.CTkLabel(
-            self.pagina,
-            text="Status:"
-        )
-
-        label_status.pack(
-            pady=(5, 2)
         )
 
         combo_status = ctk.CTkComboBox(
-            self.pagina,
+
+            janela,
+
             values=[
+
                 "Pendente",
+
                 "Aprovado",
-                "Recusado"
+
+                "Recusado",
+
+                "Concluído"
+
             ],
-            width=400,
-            height=40
+
+            width=350
+
         )
 
         combo_status.pack(
-            pady=5
+
+            pady=10
+
         )
 
         combo_status.set(
+
             "Pendente"
+
         )
 
-        # ==============================================
-        # CALCULAR TOTAL
-        # ==============================================
+        label_total = ctk.CTkLabel(
 
-        def calcular_total(event=None):
+            janela,
+
+            text="Total: R$ 0,00",
+
+            font=(
+
+                "Arial",
+
+                20,
+
+                "bold"
+
+            )
+
+        )
+
+        label_total.pack(
+
+            pady=15
+
+        )
+
+        def atualizar_total(event=None):
 
             try:
 
                 area = float(
-                    campo_area.get().replace(",", ".")
+
+                    campo_area
+
+                    .get()
+
+                    .replace(",", ".")
+
                 )
 
                 valor_m2 = float(
-                    campo_valor_m2.get().replace(",", ".")
+
+                    campo_valor_m2
+
+                    .get()
+
+                    .replace(",", ".")
+
                 )
 
-                total = area * valor_m2
+                total = (
 
-                valor_formatado = (
-                    f"R$ {total:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
+                    area *
+
+                    valor_m2
+
                 )
 
                 label_total.configure(
-                    text=f"Valor total: {valor_formatado}"
+
+                    text=(
+
+                        f"Total: "
+
+                        f"{formatar_moeda(total)}"
+
+                    )
+
                 )
 
-            except ValueError:
+            except (
+
+                ValueError,
+
+                TypeError
+
+            ):
 
                 label_total.configure(
-                    text="Valor total: R$ 0,00"
+
+                    text="Total: R$ 0,00"
+
                 )
 
         campo_area.bind(
+
             "<KeyRelease>",
-            calcular_total
+
+            atualizar_total
+
         )
 
         campo_valor_m2.bind(
+
             "<KeyRelease>",
-            calcular_total
+
+            atualizar_total
+
         )
 
-        # BOTÃO SALVAR
+        if orcamento:
 
-        botao_salvar = ctk.CTkButton(
-            self.pagina,
-            text="💾 Salvar Orçamento",
-            width=250,
-            height=45,
-            command=lambda: self.salvar_orcamento_interface(
-                clientes_dict,
-                combo_cliente,
-                campo_servico,
-                campo_area,
-                campo_valor_m2,
-                combo_status
+            combo_cliente.set(
+
+                f"{orcamento['cliente_id']} - "
+
+                f"{orcamento['cliente_nome']}"
+
             )
-        )
 
-        botao_salvar.pack(
+            campo_servico.insert(
+
+                0,
+
+                orcamento["servico"]
+
+            )
+
+            campo_area.insert(
+
+                0,
+
+                str(orcamento["area"])
+
+            )
+
+            campo_valor_m2.insert(
+
+                0,
+
+                str(orcamento["valor_m2"])
+
+            )
+
+            combo_status.set(
+
+                orcamento["status"]
+
+            )
+
+            atualizar_total()
+
+        def salvar():
+
+            try:
+
+                cliente_id = int(
+
+                    combo_cliente
+
+                    .get()
+
+                    .split(" - ")[0]
+
+                )
+
+            except (
+
+                ValueError,
+
+                IndexError
+
+            ):
+
+                messagebox.showerror(
+
+                    "Erro",
+
+                    "Selecione um cliente válido."
+
+                )
+
+                return
+
+            servico = (
+
+                campo_servico
+
+                .get()
+
+                .strip()
+
+            )
+
+            area = (
+
+                campo_area
+
+                .get()
+
+                .replace(",", ".")
+
+            )
+
+            valor_m2 = (
+
+                campo_valor_m2
+
+                .get()
+
+                .replace(",", ".")
+
+            )
+
+            status = combo_status.get()
+
+            if orcamento:
+
+                sucesso, mensagem = editar_orcamento(
+
+                    orcamento["id"],
+
+                    cliente_id,
+
+                    servico,
+
+                    area,
+
+                    valor_m2,
+
+                    status
+
+                )
+
+            else:
+
+                sucesso, mensagem = cadastrar_orcamento(
+
+                    cliente_id,
+
+                    servico,
+
+                    area,
+
+                    valor_m2,
+
+                    status
+
+                )
+
+            if sucesso:
+
+                messagebox.showinfo(
+
+                    "Sucesso",
+
+                    mensagem
+
+                )
+
+                janela.destroy()
+
+                self.abrir_orcamentos()
+
+            else:
+
+                messagebox.showerror(
+
+                    "Erro",
+
+                    mensagem
+
+                )
+
+        ctk.CTkButton(
+
+            janela,
+
+            text="Salvar Orçamento",
+
+            width=220,
+
+            fg_color=COR_PRINCIPAL,
+
+            hover_color=COR_SECUNDARIA,
+
+            command=salvar
+
+        ).pack(
+
             pady=20
+
         )
 
-    # ======================================================
-    # SALVAR ORÇAMENTO
-    # ======================================================
-
-    def salvar_orcamento_interface(
-        self,
-        clientes_dict,
-        combo_cliente,
-        campo_servico,
-        campo_area,
-        campo_valor_m2,
-        combo_status
-    ):
-
-        cliente_selecionado = combo_cliente.get()
-
-        servico = campo_servico.get().strip()
-
-        area_texto = campo_area.get().strip()
-
-        valor_m2_texto = campo_valor_m2.get().strip()
-
-        status = combo_status.get()
-
-        # VALIDAÇÕES
-
-        if not cliente_selecionado:
-
-            messagebox.showwarning(
-                "Atenção",
-                "Selecione um cliente."
-            )
-
-            return
-
-        if not servico:
-
-            messagebox.showwarning(
-                "Atenção",
-                "Digite o serviço."
-            )
-
-            return
-
-        try:
-
-            area = float(
-                area_texto.replace(",", ".")
-            )
-
-            valor_m2 = float(
-                valor_m2_texto.replace(",", ".")
-            )
-
-        except ValueError:
-
-            messagebox.showerror(
-                "Erro",
-                "Digite valores numéricos válidos."
-            )
-
-            return
-
-        if area <= 0 or valor_m2 <= 0:
-
-            messagebox.showwarning(
-                "Atenção",
-                "Área e valor do m² devem ser maiores que zero."
-            )
-
-            return
-
-        cliente_id = clientes_dict[
-            cliente_selecionado
-        ]
-
-        valor_total = area * valor_m2
-
-        # SALVAR
-
-        conexao = sqlite3.connect(
-            "orcamentos.db"
-        )
-
-        cursor = conexao.cursor()
-
-        # Garantir que a tabela existe
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS orcamentos (
-
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                cliente_id INTEGER NOT NULL,
-
-                servico TEXT NOT NULL,
-
-                area REAL NOT NULL,
-
-                valor_m2 REAL NOT NULL,
-
-                valor_total REAL NOT NULL,
-
-                status TEXT DEFAULT 'Pendente',
-
-                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-                FOREIGN KEY (cliente_id)
-                REFERENCES clientes(id)
-            )
-        """)
-
-        cursor.execute("""
-            INSERT INTO orcamentos (
-                cliente_id,
-                servico,
-                area,
-                valor_m2,
-                valor_total,
-                status
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            cliente_id,
-            servico,
-            area,
-            valor_m2,
-            valor_total,
-            status
-        ))
-
-        conexao.commit()
-        conexao.close()
-
-        valor_formatado = (
-            f"R$ {valor_total:,.2f}"
-            .replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
-        )
-
-        messagebox.showinfo(
-            "Sucesso",
-            (
-                "Orçamento cadastrado com sucesso!\n\n"
-                f"Valor total: {valor_formatado}"
-            )
-        )
-
-        self.abrir_orcamentos()
-
-    # ======================================================
-    # LISTAR ORÇAMENTOS
+            # ======================================================
+    # EXIBIR ORÇAMENTOS
     # ======================================================
 
-    def listar_orcamentos_interface(self):
+    def exibir_orcamentos(self, orcamentos=None):
 
-        for widget in self.pagina.winfo_children():
+        for widget in self.lista_orcamentos_frame.winfo_children():
             widget.destroy()
 
-        self.titulo.configure(
-            text="Orçamentos Cadastrados"
-        )
-
-        conexao = sqlite3.connect(
-            "orcamentos.db"
-        )
-
-        cursor = conexao.cursor()
-
-        cursor.execute("""
-            SELECT
-                orcamentos.id,
-                clientes.nome,
-                clientes.telefone,
-                orcamentos.servico,
-                orcamentos.area,
-                orcamentos.valor_m2,
-                orcamentos.valor_total,
-                orcamentos.status,
-                orcamentos.data_criacao
-
-            FROM orcamentos
-
-            INNER JOIN clientes
-            ON orcamentos.cliente_id = clientes.id
-
-            ORDER BY orcamentos.id DESC
-        """)
-
-        orcamentos = cursor.fetchall()
-
-        conexao.close()
-
-        # NENHUM ORÇAMENTO
+        if orcamentos is None:
+            orcamentos = listar_orcamentos()
 
         if not orcamentos:
 
-            mensagem = ctk.CTkLabel(
-                self.pagina,
-                text="Nenhum orçamento cadastrado.",
+            ctk.CTkLabel(
+                self.lista_orcamentos_frame,
+                text="Nenhum orçamento encontrado.",
                 font=("Arial", 18)
-            )
-
-            mensagem.pack(
-                pady=30
-            )
+            ).pack(pady=30)
 
             return
 
-        # CONTAINER COM SCROLL
-
-        frame_scroll = ctk.CTkScrollableFrame(
-            self.pagina,
-            width=800,
-            height=400
-        )
-
-        frame_scroll.pack(
-            padx=20,
-            pady=20,
-            fill="both",
-            expand=True
-        )
-
-        # EXIBIR ORÇAMENTOS
-
         for orcamento in orcamentos:
 
-            id_orcamento = orcamento[0]
-            nome_cliente = orcamento[1]
-            telefone = orcamento[2] or "Não informado"
-            servico = orcamento[3]
-            area = orcamento[4]
-            valor_m2 = orcamento[5]
-            valor_total = orcamento[6]
-            status = orcamento[7]
-            data = orcamento[8]
-
-            valor_total_formatado = (
-                f"R$ {valor_total:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
+            frame = ctk.CTkFrame(
+                self.lista_orcamentos_frame
             )
 
-            valor_m2_formatado = (
-                f"R$ {valor_m2:,.2f}"
-                .replace(",", "X")
-                .replace(".", ",")
-                .replace("X", ".")
+            frame.pack(
+                fill="x",
+                pady=5,
+                padx=5
             )
 
             texto = (
-                f"Orçamento #{id_orcamento}\n"
-                f"Cliente: {nome_cliente}\n"
-                f"Telefone: {telefone}\n"
-                f"Serviço: {servico}\n"
-                f"Área: {area:.2f} m²\n"
-                f"Valor por m²: {valor_m2_formatado}\n"
-                f"Valor total: {valor_total_formatado}\n"
-                f"Status: {status}\n"
-                f"Data: {data}"
+                f"#{orcamento['id']} | "
+                f"{orcamento['cliente_nome']} | "
+                f"{orcamento['servico']} | "
+                f"{formatar_numero(orcamento['area'])} m² | "
+                f"{formatar_moeda(orcamento['valor_total'])} | "
+                f"{orcamento['status']}"
             )
 
-            card = ctk.CTkFrame(
-                frame_scroll,
-                corner_radius=10
-            )
-
-            card.pack(
-                fill="x",
-                padx=10,
-                pady=10
-            )
-
-            label = ctk.CTkLabel(
-                card,
+            ctk.CTkLabel(
+                frame,
                 text=texto,
-                font=("Arial", 15),
-                justify="left",
+                font=("Arial", 14),
                 anchor="w"
+            ).pack(
+                side="left",
+                padx=10,
+                pady=15
             )
 
-            label.pack(
-                padx=20,
-                pady=15,
-                anchor="w"
+            ctk.CTkButton(
+                frame,
+                text="📄 PDF",
+                width=90,
+                command=lambda o=orcamento:
+                    self.gerar_pdf_interface(o)
+            ).pack(
+                side="right",
+                padx=5
             )
+
+            ctk.CTkButton(
+                frame,
+                text="Excluir",
+                width=80,
+                command=lambda o=orcamento:
+                    self.confirmar_exclusao_orcamento(o)
+            ).pack(
+                side="right",
+                padx=5
+            )
+
+            ctk.CTkButton(
+                frame,
+                text="Editar",
+                width=80,
+                command=lambda o=orcamento:
+                    self.abrir_formulario_orcamento(o)
+            ).pack(
+                side="right",
+                padx=5
+            )
+
+
+    # ======================================================
+    # PESQUISAR ORÇAMENTOS
+    # ======================================================
+
+    def buscar_orcamentos_interface(self):
+
+        termo = self.campo_busca_orcamento.get()
+
+        orcamentos = pesquisar_orcamentos(
+            termo
+        )
+
+        self.exibir_orcamentos(
+            orcamentos
+        )
+
+
+    # ======================================================
+    # EXCLUIR ORÇAMENTO
+    # ======================================================
+
+    def confirmar_exclusao_orcamento(
+        self,
+        orcamento
+    ):
+
+        confirmar = messagebox.askyesno(
+            "Confirmar exclusão",
+            (
+                f"Deseja excluir o orçamento "
+                f"#{orcamento['id']}?"
+            )
+        )
+
+        if not confirmar:
+            return
+
+        sucesso, mensagem = excluir_orcamento(
+            orcamento["id"]
+        )
+
+        if sucesso:
+
+            messagebox.showinfo(
+                "Sucesso",
+                mensagem
+            )
+
+            self.abrir_orcamentos()
+
+        else:
+
+            messagebox.showerror(
+                "Erro",
+                mensagem
+            )
+
+
+    # ======================================================
+    # GERAR PDF
+    # ======================================================
+
+    def gerar_pdf_interface(
+        self,
+        orcamento
+    ):
+
+        try:
+
+            dados = buscar_orcamento(
+                orcamento["id"]
+            )
+
+            if dados is None:
+
+                messagebox.showerror(
+                    "Erro",
+                    "Orçamento não encontrado."
+                )
+
+                return
+
+            if isinstance(
+                dados,
+                dict
+            ):
+
+                orcamento_dict = dados
+
+            else:
+
+                orcamento_dict = dict(
+                    dados
+                )
+
+            sucesso, resultado = gerar_pdf_orcamento(
+                orcamento_dict
+            )
+
+            if sucesso:
+
+                messagebox.showinfo(
+                    "PDF gerado com sucesso",
+                    (
+                        "O PDF do orçamento foi "
+                        "gerado com sucesso!\n\n"
+                        f"Arquivo:\n{resultado}"
+                    )
+                )
+
+            else:
+
+                messagebox.showerror(
+                    "Erro ao gerar PDF",
+                    resultado
+                )
+
+        except Exception as erro:
+
+            messagebox.showerror(
+                "Erro ao gerar PDF",
+                (
+                    "Não foi possível gerar o PDF.\n\n"
+                    f"Erro: {erro}"
+                )
+            )
+
 
     # ======================================================
     # RELATÓRIOS
@@ -1022,25 +3227,24 @@ class Sistema(ctk.CTk):
 
     def abrir_relatorios(self):
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self.limpar_pagina()
 
         self.titulo.configure(
             text="Relatórios"
         )
 
-        mensagem = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.pagina,
             text=(
-                "Módulo de relatórios em desenvolvimento.\n\n"
-                "Em breve você poderá gerar relatórios dos seus orçamentos."
+                "Módulo de relatórios\n\n"
+                "Use o botão PDF na tela de "
+                "orçamentos para gerar o documento."
             ),
             font=("Arial", 20)
-        )
-
-        mensagem.pack(
+        ).pack(
             pady=50
         )
+
 
     # ======================================================
     # CONFIGURAÇÕES
@@ -1048,29 +3252,28 @@ class Sistema(ctk.CTk):
 
     def abrir_configuracoes(self):
 
-        for widget in self.pagina.winfo_children():
-            widget.destroy()
+        self.limpar_pagina()
 
         self.titulo.configure(
             text="Configurações"
         )
 
-        mensagem = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.pagina,
             text=(
-                "Configurações do sistema\n\n"
-                "Módulo em desenvolvimento."
+                "FS ART Gesso & Drywall\n\n"
+                "Sistema OrçaSmart\n\n"
+                "Desenvolvido por "
+                "Frank Correia Souza"
             ),
             font=("Arial", 20)
-        )
-
-        mensagem.pack(
+        ).pack(
             pady=50
         )
 
 
 # ==========================================================
-# INICIAR SISTEMA
+# EXECUÇÃO DIRETA
 # ==========================================================
 
 if __name__ == "__main__":
@@ -1078,4 +3281,3 @@ if __name__ == "__main__":
     app = Sistema()
 
     app.mainloop()
-
