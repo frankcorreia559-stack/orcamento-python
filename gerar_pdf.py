@@ -44,12 +44,10 @@ def obter_caminho_logo():
         os.path.abspath(__file__)
     )
 
-    caminho_logo = os.path.join(
+    return os.path.join(
         pasta_atual,
         LOGO
     )
-
-    return caminho_logo
 
 
 # ==========================================================
@@ -112,13 +110,11 @@ def texto_seguro(
 ):
 
     if valor is None:
-
         return padrao
 
     texto = str(valor).strip()
 
     if not texto:
-
         return padrao
 
     return texto
@@ -142,15 +138,45 @@ def converter_orcamento(orcamento):
                 for chave in orcamento.keys()
             }
 
+        if isinstance(
+            orcamento,
+            dict
+        ):
+
+            return dict(orcamento)
+
         return dict(orcamento)
 
     except Exception:
 
-        return orcamento
+        return {}
 
 
 # ==========================================================
-# DESENHAR LOGO PROPORCIONAL
+# OBTER VALOR COMPATÍVEL
+# ==========================================================
+
+def obter_valor(
+    dados,
+    *chaves,
+    padrao=None
+):
+
+    for chave in chaves:
+
+        if chave in dados:
+
+            valor = dados[chave]
+
+            if valor is not None:
+
+                return valor
+
+    return padrao
+
+
+# ==========================================================
+# DESENHAR LOGO
 # ==========================================================
 
 def desenhar_logo_proporcional(
@@ -256,10 +282,6 @@ def adicionar_marca_dagua(
     if not os.path.exists(
         caminho_logo
     ):
-
-        print(
-            f"Aviso: logo não encontrada: {caminho_logo}"
-        )
 
         return
 
@@ -416,7 +438,7 @@ def desenhar_cabecalho(
 
 
 # ==========================================================
-# TÍTULO DO ORÇAMENTO
+# TÍTULO
 # ==========================================================
 
 def desenhar_titulo_orcamento(
@@ -502,10 +524,7 @@ def desenhar_titulo_orcamento(
     pdf.drawRightString(
         largura_pagina - 40,
         y - 20,
-        (
-            f"Emissão: "
-            f"{texto_seguro(data_criacao, 'Não informada')}"
-        )
+        f"Emissão: {texto_seguro(data_criacao)}"
     )
 
     return y - 45
@@ -587,9 +606,7 @@ def desenhar_dados_cliente(
     pdf.drawString(
         55,
         y - 37,
-        texto_seguro(
-            cliente_nome
-        )
+        texto_seguro(cliente_nome)
     )
 
     pdf.setFillColor(
@@ -619,16 +636,10 @@ def desenhar_dados_cliente(
     pdf.drawString(
         350,
         y - 37,
-        texto_seguro(
-            cliente_telefone
-        )
+        texto_seguro(cliente_telefone)
     )
 
-    return (
-        y
-        - altura_quadro
-        - 25
-    )
+    return y - altura_quadro - 25
 
 
 # ==========================================================
@@ -718,7 +729,7 @@ def desenhar_servico(
     y -= altura_cabecalho
 
     pdf.setFillColor(
-        colors.white
+        COR_BRANCO
     )
 
     pdf.setStrokeColor(
@@ -744,7 +755,7 @@ def desenhar_servico(
         9
     )
 
-    texto_servico = str(
+    texto_servico = texto_seguro(
         servico
     )
 
@@ -766,9 +777,7 @@ def desenhar_servico(
     pdf.drawString(
         310,
         y - 25,
-        (
-            f"{formatar_numero(area)} m²"
-        )
+        f"{formatar_numero(area)} m²"
     )
 
     pdf.drawString(
@@ -792,10 +801,7 @@ def desenhar_servico(
         )
     )
 
-    return (
-        y
-        - 65
-    )
+    return y - 65
 
 
 # ==========================================================
@@ -853,11 +859,7 @@ def desenhar_valor_total(
         )
     )
 
-    return (
-        y
-        - altura
-        - 22
-    )
+    return y - altura - 22
 
 
 # ==========================================================
@@ -932,10 +934,7 @@ def desenhar_status(
         texto_status
     )
 
-    return (
-        y
-        - 45
-    )
+    return y - 45
 
 
 # ==========================================================
@@ -1004,11 +1003,6 @@ def desenhar_observacoes(
         "as condições, medidas e especificações definidas para o serviço."
     )
 
-    return (
-        y
-        - 70
-    )
-
 
 # ==========================================================
 # RODAPÉ
@@ -1060,7 +1054,7 @@ def desenhar_rodape(
 
 
 # ==========================================================
-# GERAR PDF
+# GERAR PDF DO ORÇAMENTO
 # ==========================================================
 
 def gerar_pdf_orcamento(
@@ -1076,70 +1070,105 @@ def gerar_pdf_orcamento(
                 "Orçamento inválido."
             )
 
-        # Converte sqlite3.Row para dict
+        # --------------------------------------------------
+        # CONVERTER SQLITE ROW
+        # --------------------------------------------------
+
         orcamento = converter_orcamento(
             orcamento
         )
 
-        # ==================================================
-        # DADOS DO ORÇAMENTO
-        # ==================================================
+        # --------------------------------------------------
+        # DADOS
+        # --------------------------------------------------
 
-        id_orcamento = orcamento.get(
+        id_orcamento = obter_valor(
+            orcamento,
             "id",
-            "000"
+            padrao="000"
         )
 
-        cliente_nome = texto_seguro(
-            orcamento.get(
-                "cliente_nome"
-            )
+        # Aceita banco novo e banco antigo
+        cliente_nome = obter_valor(
+            orcamento,
+            "cliente",
+            "cliente_nome",
+            "nome_cliente",
+            padrao="Não informado"
         )
 
-        cliente_telefone = texto_seguro(
-            orcamento.get(
-                "cliente_telefone"
-            )
+        cliente_telefone = obter_valor(
+            orcamento,
+            "cliente_telefone",
+            "telefone",
+            "telefone_cliente",
+            padrao="Não informado"
         )
 
-        servico = texto_seguro(
-            orcamento.get(
-                "servico"
-            )
+        servico = obter_valor(
+            orcamento,
+            "servico",
+            "Servico",
+            "Serviço",
+            padrao="Não informado"
         )
 
-        area = orcamento.get(
+        area = obter_valor(
+            orcamento,
             "area",
-            0
+            "metro",
+            "Área(m²)",
+            padrao=0
         )
 
-        valor_m2 = orcamento.get(
+        valor_m2 = obter_valor(
+            orcamento,
             "valor_m2",
-            0
+            "valor_m²",
+            "valor_metro",
+            padrao=0
         )
 
-        valor_total = orcamento.get(
+        valor_total = obter_valor(
+            orcamento,
             "valor_total",
-            0
+            "total",
+            padrao=0
         )
 
-        status = texto_seguro(
-            orcamento.get(
-                "status"
-            ),
-            "Pendente"
+        status = obter_valor(
+            orcamento,
+            "status",
+            padrao="Pendente"
         )
 
-        data_criacao = texto_seguro(
-            orcamento.get(
-                "data_criacao"
-            ),
-            "Não informada"
+        data_criacao = obter_valor(
+            orcamento,
+            "data_criacao",
+            "data",
+            padrao="Não informada"
         )
 
-        # ==================================================
-        # ESCOLHER LOCAL DO PDF
-        # ==================================================
+        # --------------------------------------------------
+        # SE VALOR TOTAL NÃO EXISTIR, CALCULAR
+        # --------------------------------------------------
+
+        try:
+
+            if not valor_total:
+
+                valor_total = (
+                    float(area)
+                    * float(valor_m2)
+                )
+
+        except Exception:
+
+            valor_total = 0
+
+        # --------------------------------------------------
+        # ESCOLHER LOCAL
+        # --------------------------------------------------
 
         caminho = filedialog.asksaveasfilename(
             title="Salvar orçamento em PDF",
@@ -1162,9 +1191,9 @@ def gerar_pdf_orcamento(
                 "Operação cancelada."
             )
 
-        # ==================================================
-        # CRIAR PDF A4
-        # ==================================================
+        # --------------------------------------------------
+        # CRIAR PDF
+        # --------------------------------------------------
 
         largura_pagina, altura_pagina = A4
 
@@ -1173,9 +1202,9 @@ def gerar_pdf_orcamento(
             pagesize=A4
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # METADADOS
-        # ==================================================
+        # --------------------------------------------------
 
         pdf.setTitle(
             f"Orçamento Nº {id_orcamento}"
@@ -1189,9 +1218,9 @@ def gerar_pdf_orcamento(
             f"Orçamento - {NOME_EMPRESA}"
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # MARCA D'ÁGUA
-        # ==================================================
+        # --------------------------------------------------
 
         adicionar_marca_dagua(
             pdf,
@@ -1199,9 +1228,9 @@ def gerar_pdf_orcamento(
             altura_pagina
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # CABEÇALHO
-        # ==================================================
+        # --------------------------------------------------
 
         caminho_logo = obter_caminho_logo()
 
@@ -1212,9 +1241,9 @@ def gerar_pdf_orcamento(
             caminho_logo
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # TÍTULO
-        # ==================================================
+        # --------------------------------------------------
 
         y = desenhar_titulo_orcamento(
             pdf,
@@ -1224,9 +1253,9 @@ def gerar_pdf_orcamento(
             data_criacao
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # CLIENTE
-        # ==================================================
+        # --------------------------------------------------
 
         y = desenhar_dados_cliente(
             pdf,
@@ -1236,9 +1265,9 @@ def gerar_pdf_orcamento(
             cliente_telefone
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # SERVIÇO
-        # ==================================================
+        # --------------------------------------------------
 
         y = desenhar_servico(
             pdf,
@@ -1250,9 +1279,9 @@ def gerar_pdf_orcamento(
             valor_total
         )
 
-        # ==================================================
-        # VALOR TOTAL
-        # ==================================================
+        # --------------------------------------------------
+        # TOTAL
+        # --------------------------------------------------
 
         y = desenhar_valor_total(
             pdf,
@@ -1261,9 +1290,9 @@ def gerar_pdf_orcamento(
             valor_total
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # STATUS
-        # ==================================================
+        # --------------------------------------------------
 
         y = desenhar_status(
             pdf,
@@ -1271,9 +1300,9 @@ def gerar_pdf_orcamento(
             status
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # OBSERVAÇÕES
-        # ==================================================
+        # --------------------------------------------------
 
         desenhar_observacoes(
             pdf,
@@ -1281,18 +1310,18 @@ def gerar_pdf_orcamento(
             y
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # RODAPÉ
-        # ==================================================
+        # --------------------------------------------------
 
         desenhar_rodape(
             pdf,
             largura_pagina
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # FINALIZAR
-        # ==================================================
+        # --------------------------------------------------
 
         pdf.showPage()
 

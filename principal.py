@@ -1,10 +1,11 @@
-from  interface import Sistema
+from login import TelaLogin
 
 
 if __name__ == "__main__":
-    app = Sistema()
-    app.mainloop()
 
+    app = TelaLogin()
+
+    app.mainloop()
 
 
     

@@ -7,32 +7,42 @@ from banco import conectar
 # CADASTRAR CLIENTE
 # ==========================================================
 
-def cadastrar_cliente(nome, telefone=""):
-    """
-    Cadastra um novo cliente.
+def cadastrar_cliente(
+    usuario_id,
+    nome,
+    telefone="",
+    email="",
+    endereco=""
+):
 
-    Retorna:
-        (True, mensagem) em caso de sucesso.
-        (False, mensagem) em caso de erro.
-    """
+    if not usuario_id:
 
-    # ------------------------------------------------------
-    # VALIDAÇÃO
-    # ------------------------------------------------------
+        return False, "Usuário não identificado."
 
     if not nome or not nome.strip():
+
         return False, "O nome do cliente é obrigatório."
 
-    # ------------------------------------------------------
-    # LIMPEZA DOS DADOS
-    # ------------------------------------------------------
-
     nome = nome.strip()
-    telefone = telefone.strip() if telefone else ""
 
-    # ------------------------------------------------------
-    # CONEXÃO COM O BANCO
-    # ------------------------------------------------------
+    telefone = (
+        telefone.strip()
+        if telefone
+        else ""
+    )
+
+    email = (
+        email.strip()
+        if email
+        else ""
+    )
+
+    endereco = (
+        endereco.strip()
+        if endereco
+        else ""
+    )
+
 
     conexao = conectar()
 
@@ -40,24 +50,30 @@ def cadastrar_cliente(nome, telefone=""):
 
         cursor = conexao.cursor()
 
-        # --------------------------------------------------
-        # INSERIR CLIENTE
-        # --------------------------------------------------
-
         cursor.execute("""
             INSERT INTO clientes (
+                usuario_id,
                 nome,
-                telefone
+                telefone,
+                email,
+                endereco
             )
-            VALUES (?, ?)
+            VALUES (?, ?, ?, ?, ?)
         """, (
+            usuario_id,
             nome,
-            telefone
+            telefone,
+            email,
+            endereco
         ))
 
         conexao.commit()
 
-        return True, "Cliente cadastrado com sucesso!"
+        return (
+            True,
+            "Cliente cadastrado com sucesso!"
+        )
+
 
     except sqlite3.Error as erro:
 
@@ -67,9 +83,11 @@ def cadastrar_cliente(nome, telefone=""):
             f"Erro ao cadastrar cliente: {erro}"
         )
 
-        return False, (
+        return (
+            False,
             "Não foi possível cadastrar o cliente."
         )
+
 
     finally:
 
@@ -80,10 +98,12 @@ def cadastrar_cliente(nome, telefone=""):
 # LISTAR CLIENTES
 # ==========================================================
 
-def listar_clientes():
-    """
-    Retorna todos os clientes cadastrados.
-    """
+def listar_clientes(usuario_id):
+
+    if not usuario_id:
+
+        return []
+
 
     conexao = conectar()
 
@@ -94,13 +114,24 @@ def listar_clientes():
         cursor.execute("""
             SELECT
                 id,
+                usuario_id,
                 nome,
-                telefone
+                telefone,
+                email,
+                endereco,
+                data_criacao
+
             FROM clientes
+
+            WHERE usuario_id = ?
+
             ORDER BY nome COLLATE NOCASE
-        """)
+        """, (
+            usuario_id,
+        ))
 
         return cursor.fetchall()
+
 
     except sqlite3.Error as erro:
 
@@ -109,6 +140,7 @@ def listar_clientes():
         )
 
         return []
+
 
     finally:
 
@@ -119,29 +151,29 @@ def listar_clientes():
 # PESQUISAR CLIENTES
 # ==========================================================
 
-def pesquisar_clientes(termo):
-    """
-    Pesquisa clientes pelo nome ou telefone.
+def pesquisar_clientes(
+    usuario_id,
+    termo=""
+):
 
-    Se o termo estiver vazio, retorna todos os clientes.
-    """
+    if not usuario_id:
 
-    # ------------------------------------------------------
-    # LIMPAR TERMO DE PESQUISA
-    # ------------------------------------------------------
+        return []
 
-    termo = termo.strip() if termo else ""
 
-    # ------------------------------------------------------
-    # PESQUISA VAZIA
-    # ------------------------------------------------------
+    termo = (
+        termo.strip()
+        if termo
+        else ""
+    )
+
 
     if not termo:
-        return listar_clientes()
 
-    # ------------------------------------------------------
-    # CONEXÃO COM O BANCO
-    # ------------------------------------------------------
+        return listar_clientes(
+            usuario_id
+        )
+
 
     conexao = conectar()
 
@@ -152,18 +184,33 @@ def pesquisar_clientes(termo):
         cursor.execute("""
             SELECT
                 id,
+                usuario_id,
                 nome,
-                telefone
+                telefone,
+                email,
+                endereco,
+                data_criacao
+
             FROM clientes
-            WHERE nome LIKE ?
-               OR telefone LIKE ?
+
+            WHERE usuario_id = ?
+
+            AND (
+                nome LIKE ?
+                OR telefone LIKE ?
+                OR email LIKE ?
+            )
+
             ORDER BY nome COLLATE NOCASE
         """, (
+            usuario_id,
+            f"%{termo}%",
             f"%{termo}%",
             f"%{termo}%"
         ))
 
         return cursor.fetchall()
+
 
     except sqlite3.Error as erro:
 
@@ -172,6 +219,7 @@ def pesquisar_clientes(termo):
         )
 
         return []
+
 
     finally:
 
@@ -182,25 +230,19 @@ def pesquisar_clientes(termo):
 # BUSCAR CLIENTE POR ID
 # ==========================================================
 
-def buscar_cliente(cliente_id):
-    """
-    Busca um cliente específico pelo ID.
+def buscar_cliente(
+    usuario_id,
+    cliente_id
+):
 
-    Retorna:
-        sqlite3.Row se encontrado.
-        None caso não exista.
-    """
+    if not usuario_id:
 
-    # ------------------------------------------------------
-    # VALIDAR ID
-    # ------------------------------------------------------
-
-    if not cliente_id:
         return None
 
-    # ------------------------------------------------------
-    # CONEXÃO COM O BANCO
-    # ------------------------------------------------------
+    if not cliente_id:
+
+        return None
+
 
     conexao = conectar()
 
@@ -211,13 +253,25 @@ def buscar_cliente(cliente_id):
         cursor.execute("""
             SELECT
                 id,
+                usuario_id,
                 nome,
-                telefone
+                telefone,
+                email,
+                endereco,
+                data_criacao
+
             FROM clientes
+
             WHERE id = ?
-        """, (cliente_id,))
+
+            AND usuario_id = ?
+        """, (
+            cliente_id,
+            usuario_id
+        ))
 
         return cursor.fetchone()
+
 
     except sqlite3.Error as erro:
 
@@ -226,6 +280,7 @@ def buscar_cliente(cliente_id):
         )
 
         return None
+
 
     finally:
 
@@ -236,31 +291,59 @@ def buscar_cliente(cliente_id):
 # EDITAR CLIENTE
 # ==========================================================
 
-def editar_cliente(cliente_id, nome, telefone=""):
-    """
-    Atualiza os dados de um cliente existente.
-    """
+def editar_cliente(
+    usuario_id,
+    cliente_id,
+    nome,
+    telefone="",
+    email="",
+    endereco=""
+):
 
-    # ------------------------------------------------------
-    # VALIDAÇÕES
-    # ------------------------------------------------------
+    if not usuario_id:
 
-    if not nome or not nome.strip():
-        return False, "O nome do cliente é obrigatório."
+        return (
+            False,
+            "Usuário não identificado."
+        )
+
 
     if not cliente_id:
-        return False, "ID do cliente inválido."
 
-    # ------------------------------------------------------
-    # LIMPEZA DOS DADOS
-    # ------------------------------------------------------
+        return (
+            False,
+            "ID do cliente inválido."
+        )
+
+
+    if not nome or not nome.strip():
+
+        return (
+            False,
+            "O nome do cliente é obrigatório."
+        )
+
 
     nome = nome.strip()
-    telefone = telefone.strip() if telefone else ""
 
-    # ------------------------------------------------------
-    # CONEXÃO COM O BANCO
-    # ------------------------------------------------------
+    telefone = (
+        telefone.strip()
+        if telefone
+        else ""
+    )
+
+    email = (
+        email.strip()
+        if email
+        else ""
+    )
+
+    endereco = (
+        endereco.strip()
+        if endereco
+        else ""
+    )
+
 
     conexao = conectar()
 
@@ -268,35 +351,43 @@ def editar_cliente(cliente_id, nome, telefone=""):
 
         cursor = conexao.cursor()
 
-        # --------------------------------------------------
-        # ATUALIZAR CLIENTE
-        # --------------------------------------------------
-
         cursor.execute("""
             UPDATE clientes
+
             SET
                 nome = ?,
-                telefone = ?
+                telefone = ?,
+                email = ?,
+                endereco = ?
+
             WHERE id = ?
+
+            AND usuario_id = ?
         """, (
             nome,
             telefone,
-            cliente_id
+            email,
+            endereco,
+            cliente_id,
+            usuario_id
         ))
 
-        # --------------------------------------------------
-        # VERIFICAR SE O CLIENTE EXISTE
-        # --------------------------------------------------
 
         if cursor.rowcount == 0:
 
-            return False, "Cliente não encontrado."
+            return (
+                False,
+                "Cliente não encontrado."
+            )
+
 
         conexao.commit()
 
-        return True, (
+        return (
+            True,
             "Cliente atualizado com sucesso!"
         )
+
 
     except sqlite3.Error as erro:
 
@@ -306,9 +397,11 @@ def editar_cliente(cliente_id, nome, telefone=""):
             f"Erro ao editar cliente: {erro}"
         )
 
-        return False, (
+        return (
+            False,
             "Não foi possível atualizar o cliente."
         )
+
 
     finally:
 
@@ -319,24 +412,26 @@ def editar_cliente(cliente_id, nome, telefone=""):
 # EXCLUIR CLIENTE
 # ==========================================================
 
-def excluir_cliente(cliente_id):
-    """
-    Exclui um cliente pelo ID.
+def excluir_cliente(
+    usuario_id,
+    cliente_id
+):
 
-    O banco impede a exclusão caso existam
-    orçamentos vinculados ao cliente.
-    """
+    if not usuario_id:
 
-    # ------------------------------------------------------
-    # VALIDAR ID
-    # ------------------------------------------------------
+        return (
+            False,
+            "Usuário não identificado."
+        )
+
 
     if not cliente_id:
-        return False, "ID do cliente inválido."
 
-    # ------------------------------------------------------
-    # CONEXÃO COM O BANCO
-    # ------------------------------------------------------
+        return (
+            False,
+            "ID do cliente inválido."
+        )
+
 
     conexao = conectar()
 
@@ -344,45 +439,74 @@ def excluir_cliente(cliente_id):
 
         cursor = conexao.cursor()
 
-        # --------------------------------------------------
+
+        # ==================================================
+        # VERIFICAR SE O CLIENTE PERTENCE AO USUÁRIO
+        # ==================================================
+
+        cursor.execute("""
+            SELECT id
+
+            FROM clientes
+
+            WHERE id = ?
+
+            AND usuario_id = ?
+        """, (
+            cliente_id,
+            usuario_id
+        ))
+
+
+        cliente = cursor.fetchone()
+
+
+        if not cliente:
+
+            return (
+                False,
+                "Cliente não encontrado."
+            )
+
+
+        # ==================================================
         # EXCLUIR CLIENTE
-        # --------------------------------------------------
+        # ==================================================
 
         cursor.execute("""
             DELETE FROM clientes
+
             WHERE id = ?
-        """, (cliente_id,))
 
-        # --------------------------------------------------
-        # VERIFICAR SE O CLIENTE EXISTE
-        # --------------------------------------------------
+            AND usuario_id = ?
+        """, (
+            cliente_id,
+            usuario_id
+        ))
 
-        if cursor.rowcount == 0:
-
-            return False, "Cliente não encontrado."
 
         conexao.commit()
 
-        return True, (
+
+        return (
+            True,
             "Cliente excluído com sucesso!"
         )
 
-    # ------------------------------------------------------
-    # CLIENTE POSSUI ORÇAMENTOS
-    # ------------------------------------------------------
 
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as erro:
 
         conexao.rollback()
 
-        return False, (
-            "Não foi possível excluir o cliente.\n"
-            "Existem orçamentos vinculados a este cliente."
+        print(
+            f"Erro de integridade ao excluir cliente: {erro}"
         )
 
-    # ------------------------------------------------------
-    # OUTROS ERROS DO SQLITE
-    # ------------------------------------------------------
+        return (
+            False,
+            "Não foi possível excluir o cliente."
+        )
+
 
     except sqlite3.Error as erro:
 
@@ -392,9 +516,59 @@ def excluir_cliente(cliente_id):
             f"Erro ao excluir cliente: {erro}"
         )
 
-        return False, (
+        return (
+            False,
             "Ocorreu um erro ao excluir o cliente."
         )
+
+
+    finally:
+
+        conexao.close()
+
+
+# ==========================================================
+# CONTAR CLIENTES
+# ==========================================================
+
+def contar_clientes(
+    usuario_id
+):
+
+    if not usuario_id:
+
+        return 0
+
+
+    conexao = conectar()
+
+    try:
+
+        cursor = conexao.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*)
+
+            FROM clientes
+
+            WHERE usuario_id = ?
+        """, (
+            usuario_id,
+        ))
+
+        resultado = cursor.fetchone()
+
+        return resultado[0]
+
+
+    except sqlite3.Error as erro:
+
+        print(
+            f"Erro ao contar clientes: {erro}"
+        )
+
+        return 0
+
 
     finally:
 
